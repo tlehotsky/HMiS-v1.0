@@ -1,0 +1,185 @@
+
+from Tkinter import *
+import tkFont
+import os
+import glob
+import time
+import subprocess
+import re
+import sys
+import time
+import threading
+import Image 
+import ImageTk
+#from Tkinter import Tk
+#from PIL import Image, ImageTk
+#from Tkconstants import *
+
+os.system('modprobe w1-gpio')
+os.system('modprobe w1-therm')
+
+#28-000005c6ba08
+#28-000005c70f69
+#28-000005c80eb9
+
+#the_count = [1, 2, 3, 4, 5]
+#sensors = ['28-000005c6ba08', '28-000005c70f69', '28-000005c80eb9']
+sensors = ['28-000005c6ba08'] 
+sensors1 = ['28-000005c70f69'] 
+
+def read_temp_raw():
+    catdata = subprocess.Popen(['cat',device_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out,err = catdata.communicate()
+    out_decode = out.decode('utf-8')
+    lines = out_decode.split('\n')
+    return lines
+ 
+def read_temp():
+    lines = read_temp_raw()
+    while lines[0].strip()[-3:] != 'YES':
+        time.sleep(0.2)
+        lines = read_temp_raw()
+    equals_pos = lines[1].find('t=')
+    if equals_pos != -1:
+        temp_string = lines[1][equals_pos+2:]
+        temp_c = float(temp_string) / 1000.0
+        temp_f = temp_c * 9.0 / 5.0 + 32.0
+        return temp_f
+
+
+##############################################
+###########  build window  ###################
+##############################################
+
+bground="grey"
+
+
+class App(threading.Thread):
+    
+    def _init_(self):    
+        threading.Thread._init_(self)
+        self.start()
+
+    def callback(self):
+        self.root.quit()        
+
+        
+    def run(self):
+        self.root = Tk() #Makes the window
+        self.root.wm_title("Home Management System")
+        self.root.minsize(1440,1000)
+
+        self.equipTemp = StringVar()   
+        self.equipTemp1 = StringVar()
+        self.equipTemp2 = StringVar()       
+
+        self.customFont = tkFont.Font(family="Helvetica", size=16)
+        #   1st floor
+        img = Image.open("HOUSE-PLANS-01.png") 
+        photo = ImageTk.PhotoImage(img)
+
+        Label1=Label(self.root, image=photo)
+        Label1.place(x=100, y=100)
+        
+        #   2nd floor
+        img2 = Image.open("HOUSE-PLANS-02.png")
+        photo2 = ImageTk.PhotoImage(img2)
+
+        Label1=Label(self.root, image=photo2)
+        Label1.place(x=600, y=100)
+
+        #   Basement
+        img3 = Image.open("HOUSE-PLANS-03.png")
+        photo3 = ImageTk.PhotoImage(img3)
+
+        Label1=Label(self.root, image=photo3)
+        Label1.place(x=100, y=500)
+
+        #   Attic
+        img4 = Image.open("HOUSE-PLANS-04.png")
+        photo4 = ImageTk.PhotoImage(img4)
+
+        Label1=Label(self.root, image=photo4)
+        Label1.place(x=600, y=500)
+
+        #   House Isometric
+        img5 = Image.open("house-iso.png")
+        photo5 = ImageTk.PhotoImage(img5)
+
+        Label1=Label(self.root, image=photo5)
+        Label1.place(x=1080, y=130)
+        
+        #Garage Temp
+        Label2=Label(self.root, textvariable=self.equipTemp, width=6, justify=RIGHT, font=self.customFont)
+        Label2.place(x=315, y=265)
+        
+        
+
+
+
+        #Label(leftFrame, textvariable=self.equipTemp, width=8, justify=RIGHT ).grid(row=5, column=0, padx=10, pady=2)
+        #Label(leftFrame, textvariable=self.equipTemp1, width=8, justify=RIGHT).grid(row=6, column=0, padx=10, pady=2)
+        #Label(leftFrame, text="deg F").grid(row=5, column=1, padx=10, pady=2)
+        #Label(leftFrame, image=photo).grid(row=7, column=2, padx=10, pady=2)
+
+
+        print "start monitoring and updating the GUI"
+        
+        self.root.mainloop() #start monitoring and updating the GUI
+
+
+##############################################
+###########  Start Loop    ###################
+##############################################
+
+print "starting app"
+
+
+app = App()
+app.start()
+
+
+print "app started"
+
+
+###########################################################
+###################  Begin ds18b20 function  ##############
+###########################################################
+
+while True:
+
+    #   28-000005c6ba08
+    i = "28-000005c6ba08"
+    base_dir = '/sys/bus/w1/devices/'
+    device_folder = glob.glob(base_dir + i)[0]
+    device_file = device_folder + '/w1_slave'
+        
+    tempread=round(read_temp(),1)
+
+    try:
+        app.equipTemp.set(tempread)
+    except OSError:
+        Pass
+
+
+    #   28-000005c6ba08
+    i = "28-000005c685ba"
+    base_dir = '/sys/bus/w1/devices/'
+    device_folder = glob.glob(base_dir + i)[0]
+    device_file = device_folder + '/w1_slave'
+        
+    tempread=round(read_temp(),1)
+
+    app.equipTemp1.set(tempread)
+
+
+
+
+
+    ##################################################
+    ##################### END ds18b20 Function  ######
+    ##################################################
+
+    # Wait 30 seconds before continuing
+    time.sleep(5)
+
